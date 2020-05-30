@@ -322,8 +322,8 @@ def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
 
 
 def validate(val_loader, val_loader_len, model, criterion):
-    batch_time = AverageMeter()
-    data_time = AverageMeter()
+    # batch_time = AverageMeter()
+    # data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
     top5 = AverageMeter()
@@ -331,10 +331,10 @@ def validate(val_loader, val_loader_len, model, criterion):
     # switch to evaluate mode
     model.eval()
 
-    end = time.time()
+    # end = time.time()
     for i, (input, target) in enumerate(val_loader):
         # measure data loading time
-        data_time.update(time.time() - end)
+        # data_time.update(time.time() - end)
 
         target = target.cuda(non_blocking=True)
 
@@ -350,21 +350,21 @@ def validate(val_loader, val_loader_len, model, criterion):
         top5.update(prec5.item(), input.size(0))
 
         # measure elapsed time
-        batch_time.update(time.time() - end)
-        end = time.time()
+        # batch_time.update(time.time() - end)
+        # end = time.time()
 
-        # plot progress
-        sys.stdout.write(
-            '\r({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
-                batch=i + 1,
-                size=val_loader_len,
-                data=data_time.avg,
-                bt=batch_time.avg,
-                loss=losses.avg,
-                top1=top1.avg,
-                top5=top5.avg)
-        )
-        sys.stdout.flush()
+        # # plot progress
+        # sys.stdout.write(
+        #     '\r({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+        #         batch=i + 1,
+        #         size=val_loader_len,
+        #         data=data_time.avg,
+        #         bt=batch_time.avg,
+        #         loss=losses.avg,
+        #         top1=top1.avg,
+        #         top5=top5.avg)
+        # )
+        # sys.stdout.flush()
 
     return losses.avg, top1.avg
 
