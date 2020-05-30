@@ -314,7 +314,7 @@ def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
                 bt=batch_time.avg,
                 loss=losses.avg,
                 top1=top1.avg,
-                top5=top5.avg, )
+                top5=top5.avg)
         )
         sys.stdout.flush()
 
@@ -362,7 +362,7 @@ def validate(val_loader, val_loader_len, model, criterion):
                 bt=batch_time.avg,
                 loss=losses.avg,
                 top1=top1.avg,
-                top5=top5.avg, )
+                top5=top5.avg)
         )
         sys.stdout.flush()
 
