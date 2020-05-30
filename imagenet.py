@@ -307,7 +307,7 @@ def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
         end = time.time()
 
         sys.stdout.write(
-            '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+            '\r({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
                 batch=i + 1,
                 size=train_loader_len,
                 data=data_time.avg,
@@ -355,7 +355,7 @@ def validate(val_loader, val_loader_len, model, criterion):
 
         # plot progress
         sys.stdout.write(
-            '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+            '\r({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
                 batch=i + 1,
                 size=val_loader_len,
                 data=data_time.avg,
