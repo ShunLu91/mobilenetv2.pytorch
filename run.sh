@@ -1,4 +1,4 @@
-export CUDA_VISIBLE_DEVICES=2,7 && nohup python -u imagenet.py -a mobilenetv2 \
+export CUDA_VISIBLE_DEVICES=1,2 && nohup python -u imagenet.py -a mobilenetv2 \
     -b 256 \
     -d /dataset/imagenet \
     --epochs 150 \
@@ -10,5 +10,3 @@ export CUDA_VISIBLE_DEVICES=2,7 && nohup python -u imagenet.py -a mobilenetv2 \
     --input-size 224 \
     -j 16 > logdir/a0.log 2>&1 &
 tail -f logdir/a0.log
-~
-~

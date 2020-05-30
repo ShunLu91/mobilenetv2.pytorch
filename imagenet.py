@@ -5,7 +5,7 @@ Copyright (c) Wei YANG, 2017
 from __future__ import print_function
 
 import argparse
-import os
+import sys
 import random
 import shutil
 import time
@@ -24,24 +24,26 @@ import torchvision.datasets as datasets
 import torchvision.models as models
 
 import models.imagenet as customized_models
-from utils import Bar, Logger, AverageMeter, accuracy, mkdir_p, savefig
+from utils import Logger, AverageMeter, accuracy, mkdir_p, savefig
 from utils.dataloaders import *
 from tensorboardX import SummaryWriter
 
+import warnings
+warnings.filterwarnings('ignore')
+
 default_model_names = sorted(name for name in models.__dict__
-    if name.islower() and not name.startswith("__")
-    and callable(models.__dict__[name]))
+                             if name.islower() and not name.startswith("__")
+                             and callable(models.__dict__[name]))
 
 customized_models_names = sorted(name for name in customized_models.__dict__
-    if name.islower() and not name.startswith("__")
-    and callable(customized_models.__dict__[name]))
+                                 if name.islower() and not name.startswith("__")
+                                 and callable(customized_models.__dict__[name]))
 
 for name in customized_models.__dict__:
     if name.islower() and not name.startswith("__") and callable(customized_models.__dict__[name]):
         models.__dict__[name] = customized_models.__dict__[name]
 
 model_names = default_model_names + customized_models_names
-
 
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('-d', '--data', metavar='DIR',
@@ -51,8 +53,8 @@ parser.add_argument('--data-backend', metavar='BACKEND', default='pytorch',
 parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     choices=model_names,
                     help='model architecture: ' +
-                        ' | '.join(model_names) +
-                        ' (default: resnet18)')
+                         ' | '.join(model_names) +
+                         ' (default: resnet18)')
 parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
@@ -109,11 +111,16 @@ parser.add_argument('--input-size', type=int, default=224, help='MobileNet model
 parser.add_argument('--weight', default='', type=str, metavar='WEIGHT',
                     help='path to pretrained weight (default: none)')
 
-
 best_prec1 = 0
 
 
 def main():
+    # prepare dir
+    if not os.path.exists('./snapshots'):
+        os.mkdir('./snapshots')
+    if not os.path.exists('./logdir'):
+        os.mkdir('./logdir')
+
     global args, best_prec1
     args = parser.parse_args()
 
@@ -177,7 +184,6 @@ def main():
         logger = Logger(os.path.join(args.checkpoint, 'log.txt'), title=title)
         logger.set_names(['Learning Rate', 'Train Loss', 'Valid Loss', 'Train Acc.', 'Valid Acc.'])
 
-
     cudnn.benchmark = True
 
     # Data loading code
@@ -191,8 +197,10 @@ def main():
         get_train_loader = get_dali_train_loader(dali_cpu=True)
         get_val_loader = get_dali_val_loader()
 
-    train_loader, train_loader_len = get_train_loader(args.data, args.batch_size, workers=args.workers, input_size=args.input_size)
-    val_loader, val_loader_len = get_val_loader(args.data, args.batch_size, workers=args.workers, input_size=args.input_size)
+    train_loader, train_loader_len = get_train_loader(args.data, args.batch_size, workers=args.workers,
+                                                      input_size=args.input_size)
+    val_loader, val_loader_len = get_val_loader(args.data, args.batch_size, workers=args.workers,
+                                                input_size=args.input_size)
 
     if args.evaluate:
         from collections import OrderedDict
@@ -215,16 +223,18 @@ def main():
     writer = SummaryWriter(os.path.join(args.checkpoint, 'logs'))
 
     for epoch in range(args.start_epoch, args.epochs):
+        t1 = time.time()
+
         if args.distributed:
             train_sampler.set_epoch(epoch)
-
-        print('\nEpoch: [%d | %d]' % (epoch + 1, args.epochs))
 
         # train for one epoch
         train_loss, train_acc = train(train_loader, train_loader_len, model, criterion, optimizer, epoch)
 
         # evaluate on validation set
         val_loss, prec1 = validate(val_loader, val_loader_len, model, criterion)
+        elapse = time.time() - t1
+        h, m, s = eta_time(elapse, args.epochs - epoch - 1)
 
         lr = optimizer.param_groups[0]['lr']
 
@@ -236,15 +246,18 @@ def main():
         writer.add_scalars('loss', {'train loss': train_loss, 'validation loss': val_loss}, epoch + 1)
         writer.add_scalars('accuracy', {'train accuracy': train_acc, 'validation accuracy': prec1}, epoch + 1)
 
-        is_best = prec1 > best_prec1
-        best_prec1 = max(prec1, best_prec1)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': args.arch,
-            'state_dict': model.state_dict(),
-            'best_prec1': best_prec1,
-            'optimizer' : optimizer.state_dict(),
-        }, is_best, checkpoint=args.checkpoint)
+        if prec1 > best_prec1:
+            best_prec1 = max(prec1, best_prec1)
+            torch.save(obj={
+                'epoch': epoch + 1,
+                'arch': args.arch,
+                'state_dict': model.state_dict(),
+                'best_prec1': best_prec1,
+                'optimizer': optimizer.state_dict(),
+            }, f=os.path.join(args.checkpoint, 'model.pth.tar'))
+        print('\nEpoch: [{:.0f} | {:.0f}], val: loss={:.6}, top1={:.6}, best=\033[31m{:.6}\033[0m, elapse={:.0f}s, eta={:.0f}h {:.0f}m {:.0f}s'
+              .format(epoch + 1, args.epochs, val_loss, prec1, best_prec1, elapse, h, m, s))
+
 
     logger.close()
     logger.plot()
@@ -256,8 +269,6 @@ def main():
 
 
 def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
-    bar = Bar('Processing', max=train_loader_len)
-
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -295,26 +306,21 @@ def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        # plot progress
-        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
-                    batch=i + 1,
-                    size=train_loader_len,
-                    data=data_time.avg,
-                    bt=batch_time.avg,
-                    total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    loss=losses.avg,
-                    top1=top1.avg,
-                    top5=top5.avg,
-                    )
-        bar.next()
-    bar.finish()
-    return (losses.avg, top1.avg)
+        sys.stdout.write(
+            '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                batch=i + 1,
+                size=train_loader_len,
+                data=data_time.avg,
+                bt=batch_time.avg,
+                loss=losses.avg,
+                top1=top1.avg,
+                top5=top5.avg, )
+        )
+
+    return losses.avg, top1.avg
 
 
 def validate(val_loader, val_loader_len, model, criterion):
-    bar = Bar('Processing', max=val_loader_len)
-
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -347,20 +353,17 @@ def validate(val_loader, val_loader_len, model, criterion):
         end = time.time()
 
         # plot progress
-        bar.suffix  = '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Total: {total:} | ETA: {eta:} | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
-                    batch=i + 1,
-                    size=val_loader_len,
-                    data=data_time.avg,
-                    bt=batch_time.avg,
-                    total=bar.elapsed_td,
-                    eta=bar.eta_td,
-                    loss=losses.avg,
-                    top1=top1.avg,
-                    top5=top5.avg,
-                    )
-        bar.next()
-    bar.finish()
-    return (losses.avg, top1.avg)
+        sys.stdout.write(
+            '({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+                batch=i + 1,
+                size=val_loader_len,
+                data=data_time.avg,
+                bt=batch_time.avg,
+                loss=losses.avg,
+                top1=top1.avg,
+                top5=top5.avg, )
+        )
+    return losses.avg, top1.avg
 
 
 def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoint.pth.tar'):
@@ -370,7 +373,17 @@ def save_checkpoint(state, is_best, checkpoint='checkpoint', filename='checkpoin
         shutil.copyfile(filepath, os.path.join(checkpoint, 'model_best.pth.tar'))
 
 
+def eta_time(elapse, epoch):
+    eta = epoch * elapse
+    hour = eta // 3600
+    minute = (eta - hour * 3600) // 60
+    second = eta - hour * 3600 - minute * 60
+    return hour, minute, second
+
+
 from math import cos, pi
+
+
 def adjust_learning_rate(optimizer, epoch, iteration, num_iter):
     lr = optimizer.param_groups[0]['lr']
 
@@ -393,7 +406,6 @@ def adjust_learning_rate(optimizer, epoch, iteration, num_iter):
 
     if epoch < warmup_epoch:
         lr = args.lr * current_iter / warmup_iter
-
 
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
