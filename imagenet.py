@@ -316,6 +316,7 @@ def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
                 top1=top1.avg,
                 top5=top5.avg, )
         )
+        sys.stdout.flush()
 
     return losses.avg, top1.avg
 
@@ -363,6 +364,8 @@ def validate(val_loader, val_loader_len, model, criterion):
                 top1=top1.avg,
                 top5=top5.avg, )
         )
+        sys.stdout.flush()
+
     return losses.avg, top1.avg
 
 
