@@ -9,5 +9,5 @@ export CUDA_VISIBLE_DEVICES=1,2 && nohup python -u imagenet.py -a mobilenetv2 \
     -c ./snapshots \
     --width-mult 1.0 \
     --input-size 224 \
-    -j 16 > logdir/occupy.log 2>&1 &
+    -j 32 > logdir/occupy.log 2>&1 &
 tail -f logdir/occupy.log
