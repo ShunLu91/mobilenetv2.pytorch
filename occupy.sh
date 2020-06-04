@@ -1,0 +1,13 @@
+source activate torch1.0
+export CUDA_VISIBLE_DEVICES=4,5 && nohup python -u imagenet.py -a mobilenetv2 \
+    -b 256 \
+    -d /dataset/imagenet \
+    --epochs 150 \
+    --lr-decay cos \
+    --lr 0.05 \
+    --wd 4e-5 \
+    -c ./snapshots \
+    --width-mult 1.0 \
+    --input-size 224 \
+    -j 16 > logdir/occupy.log 2>&1 &
+tail -f logdir/occupy.log

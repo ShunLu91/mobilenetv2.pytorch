@@ -255,8 +255,8 @@ def main():
                 'best_prec1': best_prec1,
                 'optimizer': optimizer.state_dict(),
             }, f=os.path.join(args.checkpoint, 'model.pth.tar'))
-        print('\nEpoch: [{:.0f} | {:.0f}], val: loss={:.6}, top1={:.6}, best=\033[31m{:.6}\033[0m, elapse={:.0f}s, eta={:.0f}h {:.0f}m {:.0f}s'
-              .format(epoch + 1, args.epochs, val_loss, prec1, best_prec1, elapse, h, m, s))
+        print('\n[Epoch: {:.0f} | {:.0f}], val: loss={:.6}, top1={:.6}, best=\033[31m{:.6}\033[0m, elapse={:.2f}min, eta={:.0f}h {:.0f}m {:.0f}s'
+              .format(epoch + 1, args.epochs, val_loss, prec1, best_prec1, elapse/60, h, m, s))
 
 
     logger.close()
@@ -264,8 +264,7 @@ def main():
     savefig(os.path.join(args.checkpoint, 'log.eps'))
     writer.close()
 
-    print('Best accuracy:')
-    print(best_prec1)
+    print('Best accuracy:', best_prec1)
 
 
 def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
@@ -307,7 +306,7 @@ def train(train_loader, train_loader_len, model, criterion, optimizer, epoch):
         end = time.time()
 
         sys.stdout.write(
-            '\r({batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
+            '\r(Batch: {batch}/{size}) Data: {data:.3f}s | Batch: {bt:.3f}s | Loss: {loss:.4f} | top1: {top1: .4f} | top5: {top5: .4f}'.format(
                 batch=i + 1,
                 size=train_loader_len,
                 data=data_time.avg,
